@@ -1,0 +1,33 @@
+name: Add Bali Gamelan
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  add-gamelan:
+    if: github.event.head_commit.message != 'Add Bali Gamelan audio'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inject gamelan player
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          if 'data-gamelan-v1' not in s:
+              js=r'''<script data-gamelan-v1>
+const Gamelan=(()=>{let ctx=null,started=false,timer=null;const notes=[261.63,277.18,329.63,369.99,440,493.88,554.37];function hit(f,when,d=.22,v=.055){const o=ctx.createOscillator(),g=ctx.createGain(),filt=ctx.createBiquadFilter();o.type='triangle';o.frequency.setValueAtTime(f,when);filt.type='highpass';filt.frequency.value=180;g.gain.setValueAtTime(.0001,when);g.gain.exponentialRampToValueAtTime(v,when+.012);g.gain.exponentialRampToValueAtTime(.0001,when+d);o.connect(filt).connect(g).connect(ctx.destination);o.start(when);o.stop(when+d+.03)}function start(){if(started)return;started=true;ctx=ctx||new(window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume();let i=0;timer=setInterval(()=>{const n=notes[i%notes.length];hit(n,ctx.currentTime,.28,.05);if(i%2===0)hit(n*2,ctx.currentTime+.14,.18,.035);if(i%8===0)hit(130.81,ctx.currentTime,.55,.08);i++},360)}return{start}})();document.addEventListener('pointerdown',()=>Gamelan.start(),{once:true});document.addEventListener('keydown',()=>Gamelan.start(),{once:true});
+</script>'''
+              s=s.replace('</body>',js+'\n</body>')
+              p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Add Bali Gamelan audio'
+          git push
