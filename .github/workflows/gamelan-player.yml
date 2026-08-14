@@ -1,0 +1,30 @@
+name: Enable Bali Gamelan
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: write
+jobs:
+  inject:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add gamelan player
+        shell: bash
+        run: |
+          if grep -q 'data-gamelan-v2' index.html; then exit 0; fi
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          js='''<script data-gamelan-v2>\n(()=>{let c=null,on=false;const n=[261.63,277.18,329.63,369.99,440,493.88,554.37];function play(f,t,d=.28,v=.05){let o=c.createOscillator(),g=c.createGain(),q=c.createBiquadFilter();o.type='triangle';o.frequency.value=f;q.type='highpass';q.frequency.value=160;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(q).connect(g).connect(c.destination);o.start(t);o.stop(t+d+.02)}function start(){if(on)return;on=true;c=c||new(window.AudioContext||window.webkitAudioContext)();c.resume();let i=0;setInterval(()=>{let t=c.currentTime,f=n[i++%n.length];play(f,t);if(i%2===0)play(f*2,t+.14,.18,.035);if(i%8===0)play(130.81,t,.55,.07)},360)}document.addEventListener('pointerdown',start,{once:true});document.addEventListener('keydown',start,{once:true})})();\n</script>'''
+          p.write_text(s.replace('</body>',js+'\n</body>'),encoding='utf-8')
+          PY
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Enable Bali Gamelan audio'
+          git push
