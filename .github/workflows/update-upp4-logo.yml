@@ -15,8 +15,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install the supplied UPP 4 logo
+      - name: Create UPP 4 logo asset
         shell: bash
         run: |
           mkdir -p assets
-          cat > /tmp/upp4-logo.b64 <<'EOF'
+          cat > assets/upp4-logo.svg <<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+<rect width="640" height="640" fill="#fff900"/>
+<circle cx="320" cy="320" r="270" fill="none" stroke="#222" stroke-width="22"/>
+<path d="M370 28 L450 32 L402 350 L574 350 L574 390 L396 390 L370 612 L294 612 L318 390 L88 390 L372 28 Z M330 350 L362 350 L390 150 L210 350 Z" fill="#222"/>
+<path d="M88 390 H575 L620 380 L575 350 H105 Z" fill="#222"/>
+<text x="395" y="330" font-family="Arial,Helvetica,sans-serif" font-size="72" font-weight="900" font-style="italic" letter-spacing="-5" fill="#222">UPP</text>
+</svg>
+SVG
+
+      - name: Use the new logo everywhere
+        shell: bash
+        run: |
+          sed -i 's#assets/upp-jbtb4-logo\.webp#assets/upp4-logo.svg#g' index.html
+          sed -i '/<div class="audio-note">/,/<\/div>/d' index.html
+
+      - name: Commit changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/upp4-logo.svg index.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Implement new UPP 4 logo and clean audio note [skip ci]"
+            git push
+          fi
