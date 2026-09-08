@@ -1,0 +1,43 @@
+name: Update Portal Text
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-text:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Replace portal description
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          replacements = {
+              'Portal informasi modern untuk mengenal UPP JBTB 4 Bali, menemukan rekomendasi sekitar, serta mengakses kontak dan layanan dengan cepat': 'Portal informasi UPP JBTB 4 Bali',
+              'Portal informasi modern UPP JBTB 4 Bali dengan nuansa Bali dan PLN.': 'Portal informasi UPP JBTB 4 Bali',
+          }
+          for old, new in replacements.items():
+              s = s.replace(old, new)
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'No text changes needed.'
+          else
+            git commit -m 'Update portal description'
+            git push
+          fi
