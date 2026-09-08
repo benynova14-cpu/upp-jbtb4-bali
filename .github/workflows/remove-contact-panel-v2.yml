@@ -1,0 +1,48 @@
+name: Remove Contact Form Panel V2
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  clean-contact-panel:
+    if: "!contains(github.event.head_commit.message, '[skip contact-panel]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove contact input panel
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          # Remove only the right-hand contact form panel shown in Kontak dan Layanan.
+          pattern = r'<div\s+class=["\']panel["\']\s*>\s*<input\s+id=["\']nama["\'][^>]*>\s*<input\s+id=["\']email["\'][^>]*>\s*<textarea\s+id=["\']pesan["\'][^>]*>\s*</textarea>\s*<button\s+onclick=["\']sendMail\(\)["\'][^>]*>\s*Kirim Pesan\s*</button>\s*</div>'
+          s2, n = re.subn(pattern, '', s, count=1, flags=re.S | re.I)
+
+          # Remove the unused mail helper if the panel was present.
+          s2 = re.sub(r'function\s+sendMail\(\)\s*\{.*?\}\s*', '', s2, count=1, flags=re.S)
+
+          # Clean an empty two-column contact wrapper if it becomes empty.
+          s2 = re.sub(r'<div\s+class=["\']contact["\']\s*>\s*(<div\s+class=["\']panel["\']>.*?</div>)\s*</div>', r'<div class="contact">\1</div>', s2, count=1, flags=re.S | re.I)
+
+          if n or s2 != s:
+              p.write_text(s2, encoding='utf-8')
+              print(f'Updated index.html; removed contact form panels: {n}')
+          else:
+              print('Contact form panel already absent; nothing to change.')
+
+      - name: Commit change
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Remove contact form panel [skip contact-panel] [skip refresh]'
+          git push
