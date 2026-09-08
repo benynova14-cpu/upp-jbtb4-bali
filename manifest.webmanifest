@@ -1,0 +1,9 @@
+{
+  "name": "UPP JBTB 4 Bali",
+  "short_name": "UPP JBTB 4",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#eef8ff",
+  "theme_color": "#0068d7",
+  "description": "Portal informasi UPP JBTB 4 Bali"
+}
