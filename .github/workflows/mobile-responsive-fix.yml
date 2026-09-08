@@ -1,0 +1,50 @@
+name: Mobile responsive polish
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  mobile:
+    if: "!contains(github.event.head_commit.message, '[skip mobile]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply mobile responsive CSS
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          # Remove previous version of this patch if rerun.
+          s=re.sub(r'<style id="mobile-polish-v1">.*?</style>', '', s, flags=re.S)
+          css=r'''<style id="mobile-polish-v1">
+          html,body{max-width:100%;overflow-x:hidden}img{max-width:100%}
+          @media(max-width:760px){
+            body{font-size:13px;-webkit-text-size-adjust:100%;padding-bottom:78px}
+            header{top:8px;left:8px;right:8px;width:auto;height:58px;padding:0 11px;border-radius:16px;gap:8px}
+            .brand{min-width:0;flex:1;gap:8px}.brand img,.brand .mark{width:38px!important;height:38px!important;flex:0 0 38px;border-radius:11px}.brand b{font-size:14px;white-space:nowrap}.brand small{font-size:8px;letter-spacing:.16em}.live{margin-left:auto;font-size:9px;padding:7px 8px;border-radius:10px}.nav{display:none!important}
+            main{padding-top:76px}.hero{min-height:500px;padding:0 16px 28px!important;background-position:center center!important;border-radius:0 0 24px 24px}.hero-inner{display:block!important}.hero-copy{max-width:100%;padding:0}.hero-copy .eyebrow,.hero-copy .tag{font-size:9px;padding:7px 10px}.hero-copy h1{font-size:clamp(29px,9vw,38px)!important;line-height:1.05;margin:12px 0 10px}.hero-copy p{font-size:13px!important;line-height:1.55}.hero-actions{display:grid!important;grid-template-columns:1fr;gap:8px;margin-top:15px}.hero-actions .btn{width:100%;text-align:center;padding:12px 14px}.hero-badge,.hero-info{display:none!important}
+            .cards{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;padding:12px!important;margin-top:-18px!important}.card{min-width:0;min-height:118px;padding:14px;border-radius:16px}.card .ico{font-size:22px}.card h3{font-size:12px;margin:8px 0 5px}.card p{font-size:10px;line-height:1.45}.card strong{font-size:16px}
+            .content{padding:10px 14px 34px!important}.section{padding:38px 0 4px!important}.section h2{font-size:25px!important;line-height:1.15;margin:7px 0 10px}.section>p{font-size:12px;line-height:1.55}.grid,.contact{display:grid!important;grid-template-columns:1fr!important;gap:12px!important}.item,.panel{border-radius:16px}.item img{height:190px}.panel{padding:16px}.rec{grid-template-columns:minmax(0,1fr) 72px}.rec img{width:72px;height:54px}
+            .footer{padding:24px 15px 90px;font-size:11px;line-height:1.55}
+            .intro img{width:calc(100vw - 28px)!important;max-height:55vh!important;border-radius:18px}.load{width:65vw}
+            .rindik-player{left:10px!important;right:10px!important;bottom:10px!important;width:auto!important;max-width:none!important;transform:none!important;padding:9px 11px!important;gap:9px!important;border-radius:14px!important}.rindik-text{min-width:0;flex:1}.rindik-text b{font-size:12px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rindik-text small{font-size:9px}.rindik-player button{width:34px!important;height:34px!important;flex:0 0 34px}.rindik-player input{width:64px!important;flex:0 0 64px}
+          }
+          @media(max-width:430px){
+            .live{font-size:0;width:34px;height:34px;padding:0;display:grid;place-items:center}.live i{margin:0}.cards{grid-template-columns:1fr 1fr!important}.hero{min-height:480px}.hero-copy h1{font-size:31px!important}.item img{height:170px}
+          }
+          @media(max-width:350px){.cards{grid-template-columns:1fr!important}.rindik-player input{display:none}}
+          @media(hover:none){.card:hover,.item:hover{transform:none}}
+          </style>'''
+          s=s.replace('</head>',css+'\n</head>')
+          p.write_text(s,encoding='utf-8')
+      - name: Commit mobile polish
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Polish mobile responsive layout [skip mobile]'
+          git push
