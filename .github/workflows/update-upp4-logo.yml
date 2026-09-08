@@ -1,0 +1,22 @@
+name: Update UPP 4 Logo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  logo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install the supplied UPP 4 logo
+        shell: bash
+        run: |
+          mkdir -p assets
+          cat > /tmp/upp4-logo.b64 <<'EOF'
