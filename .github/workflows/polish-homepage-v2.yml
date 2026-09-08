@@ -1,0 +1,58 @@
+name: Polish UPP JBTB 4 Bali homepage
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  polish:
+    if: "!contains(github.event.head_commit.message, '[skip polish]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply visual polish
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('Portal informasi modern untuk mengenal UPP JBTB 4 Bali, menemukan rekomendasi sekitar, serta mengakses kontak dan layanan dengan cepat', 'Portal informasi UPP JBTB 4 Bali')
+          s = s.replace('Portal informasi modern UPP JBTB 4 Bali dengan nuansa Bali dan PLN.', 'Portal informasi UPP JBTB 4 Bali')
+          s = re.sub(r'<div\s+class=["\']audio-note["\'][^>]*>.*?</div>', '', s, flags=re.S|re.I)
+          css = r'''
+<style id="upp-reference-polish">
+:root{--blue:#0068d7;--navy:#062c63;--yellow:#ffe500}
+.topbar{top:18px;width:min(1420px,calc(100% - 48px));padding:12px 18px;border-radius:30px;background:rgba(255,255,255,.96);box-shadow:0 18px 55px rgba(0,54,110,.18);gap:18px}
+.brand{min-width:300px;gap:14px}.brand-mark,.footer-mark{width:66px;height:66px;border-radius:18px;border:0!important;background:transparent url('assets/upp-jbtb4-logo.webp') center/contain no-repeat!important;box-shadow:0 0 24px rgba(255,211,0,.65)!important;font-size:0!important;color:transparent!important;overflow:hidden}
+.brand-title{font-size:23px;color:#092d63;letter-spacing:.1px}.brand-title small{font-size:12px;font-weight:900;letter-spacing:3px;color:#34517b}
+.nav{flex:1;justify-content:center;gap:5px}.nav a{font-size:14px;padding:13px 16px;border-radius:18px;font-weight:850}.nav a:hover,.nav a.active{background:#fff0a8;color:#092d63}
+.status{font-size:11px;padding:11px 14px}.music{font-size:11px;padding:11px 14px}
+.hero{min-height:760px;padding-top:125px;background:#071e3f}.hero-bg{transform:scale(1.02);filter:saturate(1.12) contrast(1.03)}.hero:after{background:linear-gradient(90deg,rgba(2,25,57,.78) 0%,rgba(2,25,57,.34) 43%,rgba(2,25,57,.04) 75%),linear-gradient(0deg,rgba(2,25,57,.2),transparent 45%)}
+.hero-content{min-height:650px}.hero-copy{width:min(650px,100%);padding:45px 0 100px}.eyebrow{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.42);color:#fff;font-size:13px;backdrop-filter:blur(10px)}.hero h1{font-size:clamp(52px,7vw,92px);line-height:.92;color:#fff;text-shadow:0 8px 30px rgba(0,0,0,.32);letter-spacing:-4px}.hero h1 span{color:#ffe500}.hero p{font-size:21px;line-height:1.55;color:#fff;max-width:600px;text-shadow:0 3px 18px rgba(0,0,0,.3)}.hero-actions{margin-top:30px}.btn-primary{background:#ffe500;color:#062c63;box-shadow:0 15px 35px rgba(255,229,0,.32);padding:16px 24px;border-radius:18px}.btn-light{background:rgba(255,255,255,.92);padding:16px 24px;border-radius:18px}
+.wave{background:#062c63}.wave2{background:#ffe500}.wave3{background:#13cfe1}
+.quick{margin-top:-2px}.card{border-radius:22px;min-height:150px;padding:22px 19px;box-shadow:0 18px 45px rgba(3,54,108,.16)}
+section{padding:88px 0}.section-head h2{font-size:40px}.panel,.feature,.contact{border-radius:28px}
+@media(max-width:1080px){.topbar{width:calc(100% - 28px);padding:10px 12px}.brand{min-width:0}.brand-mark{width:54px;height:54px}.brand-title{font-size:18px}.nav{display:none}.hero{min-height:690px}.hero-content{min-height:590px}.hero h1{font-size:clamp(46px,8vw,76px)}}
+@media(max-width:620px){.topbar{top:8px;width:calc(100% - 16px);border-radius:20px;padding:8px 10px}.brand-mark{width:44px;height:44px;border-radius:13px}.brand-title{font-size:14px}.brand-title small{font-size:9px;letter-spacing:2px}.hero{min-height:650px;padding-top:92px}.hero-bg{background-position:60% 50%}.hero-content{min-height:540px}.hero-copy{padding-top:65px}.hero h1{font-size:clamp(38px,12vw,58px);letter-spacing:-2px}.hero p{font-size:15px}.btn-primary,.btn-light{padding:13px 16px}.card{border-radius:18px}}
+</style>
+'''
+          if 'id="upp-reference-polish"' not in s:
+              s=s.replace('</head>',css+'</head>',1)
+          p.write_text(s,encoding='utf-8')
+      - name: Commit
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'No changes needed'
+          else
+            git commit -m 'Polish UPP JBTB 4 Bali homepage [skip polish]'
+            git push
+          fi
