@@ -1,0 +1,45 @@
+name: Update UPP JBTB 4 portal description
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  update-description:
+    if: "!contains(github.event.head_commit.message, '[skip description]')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update description text
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = 'Portal informasi modern untuk mengenal UPP JBTB 4 Bali, menemukan rekomendasi sekitar, serta mengakses kontak dan layanan dengan cepat'
+          new = 'Portal informasi UPP JBTB 4 Bali'
+          s = s.replace(old, new)
+          old2 = 'Portal informasi modern UPP JBTB 4 Bali dengan nuansa Bali dan PLN.'
+          s = s.replace(old2, new)
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit change
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'No description changes needed'
+          else
+            git commit -m 'Simplify portal description [skip description]'
+            git push
+          fi
