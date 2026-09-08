@@ -1,0 +1,38 @@
+name: Remove Contact Form Panel
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  remove-form:
+    if: "!contains(github.event.head_commit.message, '[skip contact]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove contact form from Kontak dan Layanan
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          pattern = r'<div class="panel"><input id="nama" placeholder="Nama"><input id="email" placeholder="Email"><textarea id="pesan" rows="5" placeholder="Pesan / kebutuhan layanan"></textarea><button onclick="sendMail\(\)">Kirim Pesan</button></div>'
+          s2, n = re.subn(pattern, '', s, count=1)
+          if n:
+              s2 = re.sub(r'function sendMail\(\)\{.*?\}\n', '', s2, count=1, flags=re.S)
+              p.write_text(s2, encoding='utf-8')
+          else:
+              print('Contact form panel already absent; nothing to change.')
+      - name: Commit change
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Remove contact form panel [skip contact] [skip refresh]"
+          git push
