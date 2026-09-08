@@ -1,0 +1,100 @@
+name: Set Alunan Rindik Bali audio
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  rindik:
+    if: "!contains(github.event.head_commit.message, '[skip rindik]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace all duplicate audio with one Rindik player
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, math, wave, struct
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          # Remove all previously injected gamelan/audio scripts.
+          s = re.sub(r'<script[^>]*data-gamelan-v1[^>]*>.*?</script>', '', s, flags=re.S|re.I)
+          s = re.sub(r'<script[^>]*data-gamelan-v2[^>]*>.*?</script>', '', s, flags=re.S|re.I)
+          s = re.sub(r'<script[^>]*>.*?(?:const\s+Gamelan|let\s+ctx\s*=|function\s+playGamelan).*?</script>', '', s, flags=re.S|re.I)
+
+          # Remove old visual audio players, regardless of whether they were .music or .audio.
+          s = re.sub(r'<div\s+class=["\']music["\'][^>]*>.*?</div>\s*(?=<script|</body>)', '', s, flags=re.S|re.I)
+          s = re.sub(r'<div\s+class=["\']audio["\'][^>]*>.*?</div>\s*(?=<script|</body>)', '', s, flags=re.S|re.I)
+          s = re.sub(r'<audio[^>]*id=["\']gamelanAudio["\'][^>]*>.*?</audio>', '', s, flags=re.S|re.I)
+
+          # Remove old music CSS so only the new player remains.
+          s = re.sub(r'\.music\{.*?\}', '', s, flags=re.S)
+          s = re.sub(r'\.bars\{.*?\}@keyframes b\{.*?\}', '', s, flags=re.S)
+          s = re.sub(r'\.audio\{.*?\}', '', s, flags=re.S)
+          s = re.sub(r'\.equalizer\{.*?\}@keyframes eq\{.*?\}', '', s, flags=re.S)
+
+          player = '''<div id="rindikPlayer" class="rindik-player" aria-label="Alunan Rindik Bali">
+            <span class="rindik-icon">🎋</span>
+            <span class="rindik-text"><b>Alunan Rindik Bali</b><small>Aktif saat interaksi pertama</small></span>
+            <button id="rindikBtn" type="button" aria-label="Putar atau jeda Alunan Rindik Bali">▶</button>
+            <input id="rindikVolume" type="range" min="0" max="1" step="0.05" value="0.32" aria-label="Volume Alunan Rindik Bali">
+          </div>
+          <audio id="rindikAudio" preload="auto" loop src="assets/alunan-rindik-bali.wav"></audio>'''
+
+          s = re.sub(r'<div\s+id=["\']rindikPlayer["\'][\s\S]*?</audio>', '', s, flags=re.S|re.I)
+          s = s.replace('</body>', player + '''
+          <script id="rindikAudioScript">
+          (()=>{
+            const a=document.getElementById('rindikAudio'), b=document.getElementById('rindikBtn'), v=document.getElementById('rindikVolume');
+            if(!a||!b||!v)return;
+            a.volume=.32;
+            const play=()=>a.play().then(()=>b.textContent='❚❚').catch(()=>{});
+            b.addEventListener('click',()=>a.paused?play():(a.pause(),b.textContent='▶'));
+            v.addEventListener('input',()=>a.volume=Number(v.value));
+            let started=false;
+            const first=()=>{if(started)return;started=true;play()};
+            ['pointerdown','keydown','touchstart'].forEach(e=>document.addEventListener(e,first,{once:true,passive:true}));
+          })();
+          </script>
+          </body>''')
+
+          css = '''<style id="rindik-audio-style">
+          .rindik-player{position:fixed;left:18px;bottom:18px;z-index:60;display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid #fff;background:rgba(255,255,255,.95);border-radius:15px;box-shadow:0 12px 35px rgba(5,43,82,.16);backdrop-filter:blur(14px);color:#17334d}
+          .rindik-icon{font-size:22px}.rindik-text b{display:block;font-size:13px}.rindik-text small{color:#708394}.rindik-player button{border:0;width:34px;height:34px;border-radius:50%;background:#0057d9;color:#fff;font-weight:900;cursor:pointer}.rindik-player input{width:90px}.rindik-player input{accent-color:#0057d9}@media(max-width:480px){.rindik-player{left:10px;bottom:10px;transform:scale(.9);transform-origin:left bottom}.rindik-player input{width:70px}}
+          </style>'''+"\n</head>")
+          if 'id="rindik-audio-style"' not in s:
+              s = s.replace('</head>', css)
+
+          # Remove stale labels/narratives if any remain.
+          s = re.sub(r'Suara\s+Balinese\s+Gamelan', 'Alunan Rindik Bali', s, flags=re.I)
+          s = re.sub(r'Bali\s+Morning\s+Ambience', 'Alunan Rindik Bali', s, flags=re.I)
+          s = re.sub(r'Balinese\s+Gamelan', 'Alunan Rindik Bali', s, flags=re.I)
+
+          p.write_text(s, encoding='utf-8')
+
+          # Generate a gentle original Rindik-inspired bamboo-plucked loop.
+          out = Path('assets/alunan-rindik-bali.wav')
+          sr, seconds = 44100, 12
+          notes = [261.63,293.66,329.63,392.00,440.00,493.88,587.33]
+          pattern = [0,2,4,2,1,3,5,3,0,4,6,4,2,5,3,1]
+          frames=[]
+          for n in range(sr*seconds):
+              t=n/sr; step=int(t/.32); frac=t-step*.32; f=notes[pattern[step%len(pattern)]]
+              e=math.exp(-frac*7.5)
+              x=(math.sin(2*math.pi*f*t)+.35*math.sin(2*math.pi*2*f*t)+.12*math.sin(2*math.pi*3*f*t))*e
+              f2=notes[pattern[(step+3)%len(pattern)]]*1.012; e2=math.exp(-frac*9.0)
+              x += .18*math.sin(2*math.pi*f2*t)*e2
+              x *= .22
+              frames.append(struct.pack('<h', max(-32768,min(32767,int(x*32767)))))
+          with wave.open(str(out),'wb') as w:
+              w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr); w.writeframes(b''.join(frames))
+      - name: Commit single audio version
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html assets/alunan-rindik-bali.wav
+          git diff --cached --quiet || git commit -m 'Set single Alunan Rindik Bali audio [skip rindik]'
+          git push
