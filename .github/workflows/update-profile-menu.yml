@@ -1,0 +1,56 @@
+name: Update UPP JBTB 4 profile and feedback menu
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  update:
+    if: "!contains(github.event.head_commit.message, '[skip profile]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update profile, menu and visitor counter
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+
+          # Remove every remaining PLN Wellness wording and related asset references.
+          s=re.sub(r'PLN\s*WELLNESS', '', s, flags=re.I)
+          s=re.sub(r'assets/(?:assets/)?pln-wellness-banner\.svg', 'assets/upp-jbtb4-logo.webp', s, flags=re.I)
+          s=re.sub(r'\s*•\s*\s*•', ' •', s)
+
+          # Remove the old wellness-style hero wording.
+          s=s.replace('Sehat, Solid, Berenergi,<br>Menginspirasi','Selamat Datang di UPP JBTB 4 Bali')
+          s=s.replace('Portal informasi dan kebersamaan UPP JBTB 4 Bali — rangkaian kegiatan, informasi, rekomendasi sekitar, serta layanan dalam satu tempat.','Pusat informasi, layanan, rekomendasi sekitar, dan ruang digital untuk mendukung kebutuhan pegawai serta tamu di Bali.')
+          s=re.sub(r'Bergerak bersama untuk membangun insan PLN yang sehat, solid, berenergi, dan menginspirasi\.', 'Information Hub untuk profil, layanan kantor, hotel, kuliner, wisata dan kebutuhan tamu.', s, flags=re.I)
+
+          # Add feedback menu if it does not already exist.
+          if 'href="#saran-kritik"' not in s:
+              s=s.replace('<a href="#kontak">☎ KONTAK & LAYANAN</a>', '<a href="#kontak">☎ KONTAK & LAYANAN</a><a href="#saran-kritik">💬 SARAN, KRITIK & MASUKAN</a>')
+
+          # Replace the profile panel with the supplied official location/contact details.
+          profile='''<section class="section" id="profil"><div class="kicker">02 • PROFIL</div><h2>Profil UPP JBTB 4</h2><p>Informasi alamat dan kontak UPP JBTB 4 Bali.</p><div class="panel"><h3>UPP JBTB 4 Bali</h3><p><b>Alamat</b><br>Jl. Raya Abianbase No.0, Kapal, Kec. Mengwi, Kabupaten Badung, Bali 80351</p><p><b>Telepon</b><br><a href="tel:+623619006918">(0361) 9006918</a></p><a class="btn" href="https://maps.app.goo.gl/5az5Sguw9mhEeXCN9" target="_blank" rel="noopener">📍 Buka Google Maps</a></div></section>'''
+          s=re.sub(r'<section class="section" id="profil">.*?</section>', profile, s, count=1, flags=re.S)
+
+          # Add a dedicated feedback section before the contact section.
+          if 'id="saran-kritik"' not in s:
+              feedback='''<section class="section" id="saran-kritik"><div class="kicker">05 • MASUKAN</div><h2>Saran, Kritik dan Masukan</h2><p>Sampaikan saran, kritik, atau masukan untuk membantu meningkatkan layanan UPP JBTB 4 Bali.</p><div class="panel"><div class="contact"><div><label>Nama</label><input id="feedbackNama" type="text" placeholder="Nama Anda"></div><div><label>Kontak</label><input id="feedbackKontak" type="text" placeholder="No. HP / Email"></div></div><label>Pesan</label><textarea id="feedbackPesan" rows="5" placeholder="Tulis saran, kritik atau masukan Anda..."></textarea><br><button class="contact-submit" onclick="sendFeedback()">Kirim Masukan</button></div></section>'''
+              s=re.sub(r'(<section class="section" id="kontak">)', feedback+r'\n\1', s, count=1)
+
+          # Keep visitor statistics automatic: one count for each page access, with local fallback.
+          s=s.replace("https://api.counterapi.dev/v1/upp-jbtb4-bali/visits/up", "https://api.counterapi.dev/v1/upp-jbtb4-bali/visits/up")
+          if 'function sendFeedback()' not in s:
+              s=s.replace('function sendMail(){', '''function sendFeedback(){const n=encodeURIComponent(document.getElementById('feedbackNama').value),c=encodeURIComponent(document.getElementById('feedbackKontak').value),m=encodeURIComponent(document.getElementById('feedbackPesan').value);location.href=`mailto:?subject=Saran, Kritik dan Masukan UPP JBTB 4&body=Nama: ${n}%0AKontak: ${c}%0A%0A${m}`}\nfunction sendMail(){''')
+
+          p.write_text(s,encoding='utf-8')
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Apply UPP JBTB 4 profile and feedback updates [skip profile] [skip refresh]'
+          git push
