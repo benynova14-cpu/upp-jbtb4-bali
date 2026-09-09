@@ -1,0 +1,65 @@
+name: Install Latest UPP 4 Logo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  logo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create glossy UPP 4 logo
+        shell: python
+        run: |
+          from pathlib import Path
+          svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+          <defs>
+            <radialGradient id="g" cx="48%" cy="42%" r="62%"><stop offset="0" stop-color="#fffbd0"/><stop offset=".28" stop-color="#fff500"/><stop offset=".72" stop-color="#ffd600"/><stop offset="1" stop-color="#f0b900"/></radialGradient>
+            <linearGradient id="dark" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#26374d"/><stop offset=".45" stop-color="#060d18"/><stop offset="1" stop-color="#33465c"/></linearGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="12"/></filter>
+          </defs>
+          <circle cx="320" cy="320" r="292" fill="#fff6a0" opacity=".65" filter="url(#glow)"/>
+          <circle cx="320" cy="320" r="286" fill="url(#g)" stroke="#f7df55" stroke-width="12"/>
+          <circle cx="320" cy="320" r="258" fill="none" stroke="#111b29" stroke-width="24"/>
+          <circle cx="320" cy="320" r="235" fill="none" stroke="#ffd900" stroke-width="8"/>
+          <path d="M362 28h82l-43 322h170v40H396l-28 222h-78l28-222H82l294-362h78L210 350h138z" fill="url(#dark)" stroke="#dfe8f0" stroke-width="4"/>
+          <path d="M82 390h489l48-10-48-30H108z" fill="#101b29" stroke="#ffd900" stroke-width="5"/>
+          <path d="M385 265h154v104H385z" fill="#ffe500" opacity=".2"/>
+          <text x="390" y="333" font-family="Arial,Helvetica,sans-serif" font-size="78" font-weight="900" font-style="italic" letter-spacing="-7" fill="#050b13" stroke="#f4f7f8" stroke-width="2">UPP</text>
+          <path d="M115 178Q270 28 450 82" fill="none" stroke="#fff" stroke-width="10" opacity=".7" stroke-linecap="round"/>
+          </svg>'''
+          Path('assets/upp4-logo.svg').write_text(svg, encoding='utf-8')
+
+      - name: Apply logo to header and footer
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('assets/upp-jbtb4-logo.webp', 'assets/upp4-logo.svg')
+          s = s.replace('assets/upp4-logo.webp', 'assets/upp4-logo.svg')
+          css = '''\n<style id="latest-upp4-logo">\n.brand-mark,.footer-mark{font-size:0!important;background:transparent url("assets/upp4-logo.svg") center/contain no-repeat!important;border:0!important;box-shadow:none!important;width:58px!important;height:58px!important;border-radius:0!important;}\n@media(max-width:620px){.brand-mark{width:46px!important;height:46px!important}.footer-mark{width:44px!important;height:44px!important}}\n</style>\n'''
+          if 'id="latest-upp4-logo"' not in s:
+              s = s.replace('</head>', css + '</head>', 1)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Commit changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/upp4-logo.svg index.html
+          if git diff --cached --quiet; then
+            echo "No logo changes needed."
+          else
+            git commit -m "Apply latest glossy UPP 4 logo [skip ci]"
+            git push
+          fi
